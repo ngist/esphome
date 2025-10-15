@@ -17,12 +17,13 @@ class NeptuneWaterMeterSensor;
 
 struct NeptuneWaterMeterSensorStore {
   ISRInternalGPIOPin pin_data;
+  NeptuneWaterMeterSensor &water_meter;
 
   // Setup a simple ring buffer
   volatile u_int32_t write_index{0};
+  volatile u_int32_t last_bit_time{0};
   int32_t read_index{0};
   std::array<char, BUFFER_SIZE> bit_buffer{DEFAULT_BUFFER_VALUE};
-  NeptuneWaterMeterSensor &water_meter;
 
   static void clock_interrupt(NeptuneWaterMeterSensorStore *arg);
 };
@@ -51,8 +52,8 @@ class NeptuneWaterMeterSensor : public sensor::Sensor, public Component {
  protected:
   InternalGPIOPin *pin_clock_;
   InternalGPIOPin *pin_data_;
-  int32_t last_bits_captured_{0};
-  int32_t read_index_{0};
+  u_int32_t last_bits_captured_{0};
+  u_int32_t read_index_{0};
   std::array<char, BUFFER_SIZE> raw_message_{0};
   uint32_t last_reading_{0};
   double_t scale_factor_;
