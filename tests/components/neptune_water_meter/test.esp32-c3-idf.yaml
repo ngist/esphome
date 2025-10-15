@@ -1,6 +1,5 @@
 substitutions:
-  pin_a: GPIO2
-  pin_b: GPIO3
-  pin_reset: GPIO4
+  clock_pin: GPIO2
+  data_pin: GPIO3
 
 <<: !include common.yaml
