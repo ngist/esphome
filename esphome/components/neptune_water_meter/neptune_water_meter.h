@@ -13,6 +13,8 @@ namespace neptune_water_meter {
 constexpr size_t BUFFER_SIZE = 512;
 constexpr char DEFAULT_BUFFER_VALUE = 0x30;
 
+class NeptuneWaterMeterSensor;
+
 struct NeptuneWaterMeterSensorStore {
   ISRInternalGPIOPin pin_data;
 
@@ -20,6 +22,7 @@ struct NeptuneWaterMeterSensorStore {
   volatile u_int32_t write_index{0};
   int32_t read_index{0};
   std::array<char, BUFFER_SIZE> bit_buffer{DEFAULT_BUFFER_VALUE};
+  NeptuneWaterMeterSensor &water_meter;
 
   static void clock_interrupt(NeptuneWaterMeterSensorStore *arg);
 };
@@ -54,7 +57,7 @@ class NeptuneWaterMeterSensor : public sensor::Sensor, public Component {
   uint32_t last_reading_{0};
   double_t scale_factor_;
 
-  NeptuneWaterMeterSensorStore store_{};
+  NeptuneWaterMeterSensorStore store_{.water_meter = *this};
 
   CallbackManager<void(int32_t)> listeners_{};
   void flush_buffer_();
