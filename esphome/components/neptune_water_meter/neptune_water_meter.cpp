@@ -23,6 +23,7 @@ void IRAM_ATTR HOT NeptuneWaterMeterSensorStore::clock_interrupt(NeptuneWaterMet
   }
   // Increment and wrap back
   arg->write_index = (write_index + 1) % MAX_BITS;
+  arg->water_meter.enable_loop_soon_any_context();
 }
 
 void NeptuneWaterMeterSensor::flush_buffer_() {
@@ -58,6 +59,11 @@ void NeptuneWaterMeterSensor::loop() {
   if (bits_captured < 0) {
     bits_captured += MAX_BITS;
   }  // Deal with ring buffer wrapping around
+
+  if (!bits_captured) {
+    this->disable_loop();
+    return;
+  }
 
   // TODO: Find a better way to check for idle for now...
   // Have bits and they haven't changed, transmission must be completed.
