@@ -21,7 +21,7 @@ struct NeptuneWaterMeterSensorStore {
   int32_t read_index{0};
   std::array<char, BUFFER_SIZE> bit_buffer{DEFAULT_BUFFER_VALUE};
 
-  static void clock_pin_rising_intr(NeptuneWaterMeterSensorStore *arg);
+  static void clock_interrupt(NeptuneWaterMeterSensorStore *arg);
 };
 
 class NeptuneWaterMeterSensor : public sensor::Sensor, public Component {
@@ -50,7 +50,7 @@ class NeptuneWaterMeterSensor : public sensor::Sensor, public Component {
   InternalGPIOPin *pin_data_;
   int32_t last_bits_captured_{0};
   int32_t read_index_{0};
-  std::array<char, BUFFER_SIZE> raw_message{0};
+  std::array<char, BUFFER_SIZE> raw_message_{0};
   uint32_t last_reading_{0};
   double_t scale_factor_;
 

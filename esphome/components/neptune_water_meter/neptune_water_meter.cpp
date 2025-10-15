@@ -14,8 +14,8 @@ constexpr size_t MAX_BITS = BUFFER_SIZE * BITS_PER_BYTE;
 
 void IRAM_ATTR HOT NeptuneWaterMeterSensorStore::clock_interrupt(NeptuneWaterMeterSensorStore *arg) {
   // Capture data as quickly as possible when clock rises
-  bool_t data = arg->pin_data.digital_read();
-  u_int32_t write_index = args->write_index;
+  bool data = arg->pin_data.digital_read();
+  u_int32_t write_index = arg->write_index;
 
   // Stuff the bit in the buffer, reader is responsible for clearing out the buffer after it's read.
   if (data) {
@@ -39,12 +39,13 @@ uint32_t NeptuneWaterMeterSensor::parse_reading_() {
   return 0;
 }
 
-void NeptumeWaterMeterSensor::setup() {
+void NeptuneWaterMeterSensor::setup() {
   this->pin_clock_->setup();
   this->pin_data_->setup();
   this->store_.pin_data = this->pin_data_->to_isr();
 
-  this->pin_a_->attach_interrupt(NeptuneWaterMeterSensorStore::clock_interrupt, &this->store_, gpio::INTERRUPT_RISING_EDGE;
+  this->pin_clock_->attach_interrupt(NeptuneWaterMeterSensorStore::clock_interrupt, &this->store_,
+                                     gpio::INTERRUPT_RISING_EDGE);
 }
 void NeptuneWaterMeterSensor::dump_config() {
   LOG_SENSOR("", "Neptune Water Meter", this);
@@ -64,7 +65,7 @@ void NeptuneWaterMeterSensor::loop() {
   if (bus_idle && bits_captured) {
     bool buffer_corrupted = false;
     ESP_LOGD(TAG, "Captured %d unprocessed bits.");
-    if (bit_captured % BITS_PER_BYTE != 0) {
+    if (bits_captured % BITS_PER_BYTE != 0) {
       // Bits received should be divisible by 4
       ESP_LOGW(TAG, "Incomplete Data Received");
       buffer_corrupted = true;
@@ -76,7 +77,7 @@ void NeptuneWaterMeterSensor::loop() {
     }
     if (buffer_corrupted) {
       ESP_LOGD(TAG, "Buffer corrupted flushing");
-      this->flush_buffer();
+      this->flush_buffer_();
       return;
     }
 
@@ -88,7 +89,7 @@ void NeptuneWaterMeterSensor::loop() {
       ESP_LOGD(TAG, "%s", this->raw_message_.data());
     }
 
-    uint32_t reading = this->parse_reading();
+    uint32_t reading = this->parse_reading_();
     if (this->last_reading_ != reading) {
       this->last_reading_ = reading;
       this->publish_state(reading);
@@ -97,7 +98,7 @@ void NeptuneWaterMeterSensor::loop() {
   }
 }
 
-float NeptumeWaterMeterSensor::get_setup_priority() const { return setup_priority::DATA; }
+float NeptuneWaterMeterSensor::get_setup_priority() const { return setup_priority::DATA; }
 
 }  // namespace neptune_water_meter
 }  // namespace esphome
