@@ -25,11 +25,22 @@ void IRAM_ATTR HOT NeptuneWaterMeterSensorStore::clock_interrupt(NeptuneWaterMet
   arg->write_index = (write_index + 1) % MAX_BITS;
 }
 
-void NeptumeWaterMeterSensor::setup() {
-  int32_t initial_value = -1;
+void NeptuneWaterMeterSensor::flush_buffer_() {
+  this->read_index_ = 0;
+  {
+    InterruptLock lock;
+    this->store_.write_index = 0;
+    this->store_.bit_buffer.fill(DEFAULT_BUFFER_VALUE);
+  }
+}
 
+uint32_t NeptuneWaterMeterSensor::parse_reading_() {
+  // TODO IMPLEMENT
+  return 0;
+}
+
+void NeptumeWaterMeterSensor::setup() {
   this->pin_clock_->setup();
-  this->store_.pin_clock = this->pin_clock_->to_isr();
   this->pin_data_->setup();
   this->store_.pin_data = this->pin_data_->to_isr();
 
@@ -42,44 +53,51 @@ void NeptuneWaterMeterSensor::dump_config() {
   ESP_LOGCONFIG(TAG, "  Scale Factor: %f.1", this->scale_factor_);
 }
 void NeptuneWaterMeterSensor::loop() {
-  int32_t bits_captured = this->store_.write_index - this->store_.read_index;
+  int32_t bits_captured = this->store_.write_index - this->read_index_;
   if (bits_captured < 0) {
     bits_captured += MAX_BITS;
   }  // Deal with ring buffer wrapping around
-  ESP_LOGD(TAG, "Captured %d unprocessed bits.");
 
-  // TODO: Find a better way to check for idle
-  bool bus_idle = this->store_.last_count == bits_captured if (bus_idle && bits_captured) {
-    uint32_t raw_reading = 0;
-    // Have bits and they haven't changed, transmission must be completed.
-    if (bit_captured % 4 != 0) {
-      ESP_LOGW(TAG, "The number of bits collected per reading should be divisible by 4 got %d.", bits_captured);
+  // TODO: Find a better way to check for idle for now...
+  // Have bits and they haven't changed, transmission must be completed.
+  bool bus_idle = this->last_bits_captured_ == bits_captured;
+  if (bus_idle && bits_captured) {
+    bool buffer_corrupted = false;
+    ESP_LOGD(TAG, "Captured %d unprocessed bits.");
+    if (bit_captured % BITS_PER_BYTE != 0) {
+      // Bits received should be divisible by 4
+      ESP_LOGW(TAG, "Incomplete Data Received");
+      buffer_corrupted = true;
     }
-    for (char &iterator : this->store_.bit_buffer) {
-      // Reset value after read
-      iterator = 0x30;
+    if (this->read_index_ % BITS_PER_BYTE != 0) {
+      // First bit should be aligned to a byte boundary
+      ESP_LOGE(TAG, "Data Alignment Error");
+      buffer_corrupted = true;
     }
-  }
+    if (buffer_corrupted) {
+      ESP_LOGD(TAG, "Buffer corrupted flushing");
+      this->flush_buffer();
+      return;
+    }
 
-  int counter = this->store_.counter;
-  if (this->store_.last_read != counter || this->publish_initial_value_) {
-    if (this->restore_mode_ == ROTARY_ENCODER_RESTORE_DEFAULT_ZERO) {
-      this->rtc_.save(&counter);
+    int32_t begin = this->read_index_ / BITS_PER_BYTE;
+    int32_t end = (this->read_index_ + bits_captured) / BITS_PER_BYTE;
+    this->raw_message_.fill(0);
+    for (int i = begin; i < end; i++) {
+      this->raw_message_[i - begin] = this->store_.bit_buffer[i % BUFFER_SIZE];
+      ESP_LOGD(TAG, "%s", this->raw_message_.data());
     }
-    this->store_.last_read = counter;
-    this->publish_state(counter);
-    this->listeners_.call(counter);
-    this->publish_initial_value_ = false;
+
+    uint32_t reading = this->parse_reading();
+    if (this->last_reading_ != reading) {
+      this->last_reading_ = reading;
+      this->publish_state(reading);
+      this->listeners_.call(reading);
+    }
   }
 }
 
-float RotaryEncoderSensor::get_setup_priority() const { return setup_priority::DATA; }
-void RotaryEncoderSensor::set_restore_mode(RotaryEncoderRestoreMode restore_mode) {
-  this->restore_mode_ = restore_mode;
-}
-void RotaryEncoderSensor::set_resolution(RotaryEncoderResolution mode) { this->store_.resolution = mode; }
-void RotaryEncoderSensor::set_min_value(int32_t min_value) { this->store_.min_value = min_value; }
-void RotaryEncoderSensor::set_max_value(int32_t max_value) { this->store_.max_value = max_value; }
+float NeptumeWaterMeterSensor::get_setup_priority() const { return setup_priority::DATA; }
 
 }  // namespace neptune_water_meter
 }  // namespace esphome
