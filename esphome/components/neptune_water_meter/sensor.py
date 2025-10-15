@@ -3,9 +3,9 @@ import esphome.codegen as cg
 from esphome.components import sensor
 import esphome.config_validation as cv
 from esphome.const import (
-    CONF_PIN_CLOCK,
-    CONF_PIN_DATA,
-    CONF_SCALE_FACTOR,
+    CONF_CLOCK_PIN,
+    CONF_DATA_PIN,
+    CONF_GAIN_FACTOR,
     ICON_METER_GAS,
     UNIT_GALLONS,
 )
@@ -25,9 +25,9 @@ CONFIG_SCHEMA = cv.All(
     )
     .extend(
         {
-            cv.Required(CONF_PIN_CLOCK): cv.All(pins.internal_gpio_input_pin_schema),
-            cv.Required(CONF_PIN_DATA): cv.All(pins.internal_gpio_input_pin_schema),
-            cv.Optional(CONF_SCALE_FACTOR, default=1): cv.float_,
+            cv.Required(CONF_CLOCK_PIN): cv.All(pins.internal_gpio_input_pin_schema),
+            cv.Required(CONF_DATA_PIN): cv.All(pins.internal_gpio_input_pin_schema),
+            cv.Optional(CONF_GAIN_FACTOR, default=1): cv.float_,
         }
     )
     .extend(cv.COMPONENT_SCHEMA),
@@ -38,8 +38,8 @@ async def to_code(config):
     var = await sensor.new_sensor(config)
     await cg.register_component(var, config)
 
-    pin_clock = await cg.gpio_pin_expression(config[CONF_PIN_CLOCK])
+    pin_clock = await cg.gpio_pin_expression(config[CONF_CLOCK_PIN])
     cg.add(var.set_pin_clock(pin_clock))
-    pin_data = await cg.gpio_pin_expression(config[CONF_PIN_DATA])
+    pin_data = await cg.gpio_pin_expression(config[CONF_DATA_PIN])
     cg.add(var.set_pin_data(pin_data))
-    cg.add(var.set_scale_factor(config[CONF_SCALE_FACTOR]))
+    cg.add(var.set_scale_factor(config[CONF_GAIN_FACTOR]))

@@ -1,0 +1,5 @@
+sensor:
+  - platform: neptune_water_meter
+    clock_pin: ${clock_pin}
+    data_pin: ${data_pin}
+    gain_factor: 1

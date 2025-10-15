@@ -1,0 +1,5 @@
+substitutions:
+  clock_pin: GPIO12
+  data_pin: GPIO13
+
+<<: !include common.yaml
