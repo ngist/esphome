@@ -70,12 +70,12 @@ void NeptuneWaterMeterSensor::loop() {
   }
 
   if (!bus_idle) {
-    ESP_LOGD(TAG, "Time since last bit %d", time_since_last_bit)
+    ESP_LOGD(TAG, "Time since last bit %d", time_since_last_bit);
     return;
   }
 
   bool buffer_corrupted = false;
-  ESP_LOGD(TAG, "Captured %d unprocessed bits.");
+  ESP_LOGD(TAG, "Captured %d unprocessed bits.", bits_captured);
   if (bits_captured % BITS_PER_BYTE != 0) {
     // Bits received should be divisible by 4
     ESP_LOGW(TAG, "Incomplete Data Received");
