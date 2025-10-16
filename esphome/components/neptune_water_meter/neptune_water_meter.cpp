@@ -92,7 +92,7 @@ void NeptuneWaterMeterSensor::loop() {
   if (buffer_corrupted) {
     ESP_LOGD(TAG, "Buffer corrupted flushing");
     std::string buffer_data(this->store_.bit_buffer.data(), this->store_.bit_buffer.size());
-    ESP_LOGD(TAG, "Buffer Data: %s", buffer_data);
+    ESP_LOGD(TAG, "Buffer Data: %s", buffer_data.c_str());
     this->flush_buffer_();
     return;
   }
