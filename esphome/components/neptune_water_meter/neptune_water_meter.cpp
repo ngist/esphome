@@ -61,7 +61,7 @@ void NeptuneWaterMeterSensor::dump_config() {
 }
 void NeptuneWaterMeterSensor::loop() {
   uint32_t time_since_last_bit = millis() - this->store_.last_bit_time;
-  bool bus_idle = time_since_last_bit > 1000;
+  bool bus_idle = time_since_last_bit > 100;
   // Capture volatile value once to maintain a consistent state throughout the loop.
   uint32_t write_index = this->store_.write_index;
   uint32_t bits_captured = write_index - this->read_index_;
