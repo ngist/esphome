@@ -11,7 +11,6 @@ namespace esphome {
 namespace neptune_water_meter {
 
 constexpr size_t BUFFER_SIZE = 512;
-constexpr char DEFAULT_BUFFER_VALUE = 0x30;
 
 class NeptuneWaterMeterSensor;
 
@@ -20,10 +19,9 @@ struct NeptuneWaterMeterSensorStore {
   NeptuneWaterMeterSensor &water_meter;
 
   // Setup a simple ring buffer
-  volatile uint32_t write_index{0};
-  volatile uint32_t last_bit_time{0};
-  int32_t read_index{0};
-  std::array<char, BUFFER_SIZE> bit_buffer{DEFAULT_BUFFER_VALUE};
+  volatile uint32_t write_index;
+  volatile uint32_t last_bit_time;
+  std::array<char, BUFFER_SIZE> bit_buffer;
 
   static void clock_interrupt(NeptuneWaterMeterSensorStore *arg);
 };

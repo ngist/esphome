@@ -11,6 +11,7 @@ static const char *const TAG = "neptune_water_meter";
 // as ascii characters this will save work later.
 constexpr uint8_t BITS_PER_BYTE = 4;
 constexpr size_t MAX_BITS = BUFFER_SIZE * BITS_PER_BYTE;
+constexpr char DEFAULT_BUFFER_VALUE = 0x30;
 
 void IRAM_ATTR HOT NeptuneWaterMeterSensorStore::clock_interrupt(NeptuneWaterMeterSensorStore *arg) {
   // Capture data as quickly as possible when clock rises
@@ -45,6 +46,8 @@ void NeptuneWaterMeterSensor::setup() {
   this->pin_clock_->setup();
   this->pin_data_->setup();
   this->store_.pin_data = this->pin_data_->to_isr();
+  this->store_.bit_buffer.fill(DEFAULT_BUFFER_VALUE);
+  this->store_.write_index = 0;
   this->store_.last_bit_time = millis();
 
   this->pin_clock_->attach_interrupt(NeptuneWaterMeterSensorStore::clock_interrupt, &this->store_,
