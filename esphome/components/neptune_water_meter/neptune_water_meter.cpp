@@ -9,14 +9,14 @@ static const char *const TAG = "neptune_water_meter";
 // The raw data is BCD binary coded decimal so every 4 bits represents one 0-9 decimal value so only
 // pack 4 bits per byte, the upper nibble contains 0x3 so that the packed values are directly encoded
 // as ascii characters this will save work later.
-constexpr u_int8_t BITS_PER_BYTE = 4;
+constexpr uint8_t BITS_PER_BYTE = 4;
 constexpr size_t MAX_BITS = BUFFER_SIZE * BITS_PER_BYTE;
 
 void IRAM_ATTR HOT NeptuneWaterMeterSensorStore::clock_interrupt(NeptuneWaterMeterSensorStore *arg) {
   // Capture data as quickly as possible when clock rises
   bool data = arg->pin_data.digital_read();
   arg->last_bit_time = millis();
-  u_int32_t write_index = arg->write_index;
+  uint32_t write_index = arg->write_index;
 
   // Stuff the bit in the buffer, reader is responsible for clearing out the buffer after it's read.
   if (data) {
@@ -54,14 +54,14 @@ void NeptuneWaterMeterSensor::dump_config() {
   LOG_SENSOR("", "Neptune Water Meter", this);
   LOG_PIN("  Pin Clock: ", this->pin_clock_);
   LOG_PIN("  Pin Data: ", this->pin_data_);
-  ESP_LOGCONFIG(TAG, "  Scale Factor: %f.1", this->scale_factor_);
+  ESP_LOGCONFIG(TAG, "  Scale Factor: %f", this->scale_factor_);
 }
 void NeptuneWaterMeterSensor::loop() {
-  u_int32_t time_since_last_bit = millis() - this->store_.last_bit_time;
+  uint32_t time_since_last_bit = millis() - this->store_.last_bit_time;
   bool bus_idle = time_since_last_bit > 1000;
   // Capture volatile value once to maintain a consistent state throughout the loop.
-  u_int32_t write_index = this->store_.write_index;
-  u_int32_t bits_captured = write_index - this->read_index_;
+  uint32_t write_index = this->store_.write_index;
+  uint32_t bits_captured = write_index - this->read_index_;
 
   if (!bits_captured) {
     this->disable_loop();
@@ -88,6 +88,8 @@ void NeptuneWaterMeterSensor::loop() {
   }
   if (buffer_corrupted) {
     ESP_LOGD(TAG, "Buffer corrupted flushing");
+    std::string buffer_data(this->store_.bit_buffer.data(), this->store_.bit_buffer.size());
+    ESP_LOGD(TAG, "Buffer Data: %s", buffer_data);
     this->flush_buffer_();
     return;
   }
