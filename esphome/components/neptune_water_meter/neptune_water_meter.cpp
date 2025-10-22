@@ -15,27 +15,16 @@ constexpr char DEFAULT_BUFFER_VALUE = 0x30;
 
 void IRAM_ATTR HOT NeptuneWaterMeterSensorStore::clock_interrupt(NeptuneWaterMeterSensorStore *arg) {
   // Capture data as quickly as possible when clock rises
+  bool data = arg->pin_data.digital_read();
   arg->last_bit_time = millis();
-  bool has_been_read = false;
-  while ((millis() - arg->last_bit_time) < 5) {
-    if (!arg->pin_clock.digital_read()) {
-      has_been_read = false;
-    }
-    if (!has_been_read && arg->pin_clock.digital_read()) {
-      bool data = arg->pin_data.digital_read();
-      has_been_read = true;
-      arg->last_bit_time = millis();
-      uint32_t write_index = arg->write_index;
+  uint32_t write_index = arg->write_index;
 
-      // Stuff the bit in the buffer, reader is responsible for clearing out the buffer after it's read.
-      if (data) {
-        arg->bit_buffer[write_index / BITS_PER_BYTE] |= data << (write_index % BITS_PER_BYTE);
-      }
-      // Increment and wrap back
-      arg->write_index = (write_index + 1) % MAX_BITS;
-      arg->bits_captured++;
-    }
+  // Stuff the bit in the buffer, reader is responsible for clearing out the buffer after it's read.
+  if (data) {
+    arg->bit_buffer[write_index / BITS_PER_BYTE] |= data << (write_index % BITS_PER_BYTE);
   }
+  // Increment and wrap back
+  arg->write_index = (write_index + 1) % MAX_BITS;
   arg->water_meter.enable_loop_soon_any_context();
 }
 
@@ -57,10 +46,8 @@ void NeptuneWaterMeterSensor::setup() {
   this->pin_clock_->setup();
   this->pin_data_->setup();
   this->store_.pin_data = this->pin_data_->to_isr();
-  this->store_.pin_clock = this->pin_clock_->to_isr();
   this->store_.bit_buffer.fill(DEFAULT_BUFFER_VALUE);
   this->store_.write_index = 0;
-  this->store_.bits_captured = 0;
   this->store_.last_bit_time = millis();
 
   this->pin_clock_->attach_interrupt(NeptuneWaterMeterSensorStore::clock_interrupt, &this->store_,
