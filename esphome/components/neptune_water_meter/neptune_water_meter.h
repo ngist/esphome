@@ -52,7 +52,7 @@ class NeptuneWaterMeterSensor : public sensor::Sensor, public Component {
   InternalGPIOPin *pin_data_;
   uint32_t last_bits_captured_{0};
   uint32_t read_index_{0};
-  std::array<char, BUFFER_SIZE> raw_message_{0};
+  std::array<uint16_t, BUFFER_SIZE> raw_message_{0};
   uint32_t last_reading_{0};
   double_t scale_factor_;
 
