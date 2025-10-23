@@ -60,7 +60,7 @@ class NeptuneWaterMeterSensor : public sensor::Sensor, public Component {
 
   CallbackManager<void(int32_t)> listeners_{};
   void flush_buffer_();
-  uint32_t parse_reading_();
+  double_t parse_reading_();
 };
 
 }  // namespace neptune_water_meter

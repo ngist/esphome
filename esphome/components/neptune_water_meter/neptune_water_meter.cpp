@@ -35,9 +35,36 @@ void NeptuneWaterMeterSensor::flush_buffer_() {
   }
 }
 
-uint32_t NeptuneWaterMeterSensor::parse_reading_() {
-  // TODO IMPLEMENT
-  return 0;
+double_t NeptuneWaterMeterSensor::parse_reading_() {
+  std::string text{};
+  for (uint16_t it : this->raw_message_) {
+    // Discard start bit and stop bits leave parity bit
+    if (it & 0x001) {
+      ESP_LOGW(TAG, "Bad start bit");
+    }
+    if (!(it & 0x200)) {
+      ESP_LOGW(TAG, "Bad first stop bit");
+    }
+    if (!(it & 0x400)) {
+      ESP_LOGW(TAG, "Bad second stop bit");
+    }
+    uint8_t word = (it & 0x1FF) >> 1;
+    ESP_LOGD(TAG, "word: %x", word);
+    text.push_back(word);
+  }
+  ESP_LOGD(TAG, "SemiProcessed: %s", text.c_str());
+  if (text.size() != 31) {
+    ESP_LOGE(TAG, "Unexpected messages size %d", text.size());
+    return -1;
+  }
+  std::string reading{"0123456.7"};
+  for (int i = 7; i < 13; i++) {
+    reading[i - 7] = text[i] & 0x7f;
+  }
+  reading[6] = text[27] & 0x7F;
+  reading[8] = text[28] & 0x7F;
+
+  return std::stod(reading.c_str());
 }
 
 void NeptuneWaterMeterSensor::setup() {
@@ -89,7 +116,11 @@ void NeptuneWaterMeterSensor::loop() {
   }
   if (buffer_corrupted) {
     ESP_LOGD(TAG, "Buffer corrupted flushing");
-    std::string buffer_data(this->store_.bit_buffer.data(), this->store_.bit_buffer.size());
+    std::string buffer_data = "";
+    for (auto it : this->store_.bit_buffer) {
+      buffer_data.push_back(it >> 8 & 0xFF);
+      buffer_data.push_back(it & 0xFF);
+    }
     ESP_LOGD(TAG, "Buffer Data: %s", buffer_data.c_str());
     this->flush_buffer_();
     return;
@@ -106,7 +137,7 @@ void NeptuneWaterMeterSensor::loop() {
 
   ESP_LOGD(TAG, "%s", this->raw_message_.data());
   uint32_t reading = this->parse_reading_();
-  if (this->last_reading_ != reading) {
+  if (this->last_reading_ != reading && reading > 0) {
     this->last_reading_ = reading;
     this->publish_state(reading);
     this->listeners_.call(reading);
