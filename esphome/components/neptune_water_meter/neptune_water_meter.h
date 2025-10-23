@@ -21,7 +21,7 @@ struct NeptuneWaterMeterSensorStore {
   // Setup a simple ring buffer
   volatile uint32_t write_index;
   volatile uint32_t last_bit_time;
-  std::array<unit16_t, BUFFER_SIZE> bit_buffer;
+  std::array<uint16_t, BUFFER_SIZE> bit_buffer;
 
   static void clock_interrupt(NeptuneWaterMeterSensorStore *arg);
 };
