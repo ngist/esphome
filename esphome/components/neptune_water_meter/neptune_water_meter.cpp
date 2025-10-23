@@ -6,12 +6,10 @@ namespace esphome {
 namespace neptune_water_meter {
 
 static const char *const TAG = "neptune_water_meter";
-// The raw data is BCD binary coded decimal so every 4 bits represents one 0-9 decimal value so only
-// pack 4 bits per byte, the upper nibble contains 0x3 so that the packed values are directly encoded
-// as ascii characters this will save work later.
-constexpr uint8_t BITS_PER_BYTE = 4;
-constexpr size_t MAX_BITS = BUFFER_SIZE * BITS_PER_BYTE;
-constexpr char DEFAULT_BUFFER_VALUE = 0x30;
+// The raw data is trasmitted in 11 buts per word
+constexpr uint8_t BITS_PER_WORD = 11;
+constexpr size_t MAX_BITS = BUFFER_SIZE * BITS_PER_WORD;
+constexpr uint16_t DEFAULT_BUFFER_VALUE = 0;
 
 void IRAM_ATTR HOT NeptuneWaterMeterSensorStore::clock_interrupt(NeptuneWaterMeterSensorStore *arg) {
   // Capture data as quickly as possible when clock rises
@@ -21,7 +19,7 @@ void IRAM_ATTR HOT NeptuneWaterMeterSensorStore::clock_interrupt(NeptuneWaterMet
 
   // Stuff the bit in the buffer, reader is responsible for clearing out the buffer after it's read.
   if (data) {
-    arg->bit_buffer[write_index / BITS_PER_BYTE] |= data << (write_index % BITS_PER_BYTE);
+    arg->bit_buffer[write_index / BITS_PER_WORD] |= data << (write_index % BITS_PER_WORD);
   }
   // Increment and wrap back
   arg->write_index = (write_index + 1) % MAX_BITS;
@@ -79,13 +77,13 @@ void NeptuneWaterMeterSensor::loop() {
 
   bool buffer_corrupted = false;
   ESP_LOGD(TAG, "Captured %d unprocessed bits.", bits_captured);
-  if (bits_captured % BITS_PER_BYTE != 0) {
-    // Bits received should be divisible by 4
+  if (bits_captured % BITS_PER_WORD != 0) {
+    // Bits received should be divisible by word length
     ESP_LOGW(TAG, "Incomplete Data Received");
     buffer_corrupted = true;
   }
-  if (this->read_index_ % BITS_PER_BYTE != 0) {
-    // First bit should be aligned to a byte boundary
+  if (this->read_index_ % BITS_PER_WORD != 0) {
+    // First bit should be aligned to a word boundary
     ESP_LOGE(TAG, "Data Alignment Error");
     buffer_corrupted = true;
   }
@@ -97,8 +95,8 @@ void NeptuneWaterMeterSensor::loop() {
     return;
   }
 
-  int32_t begin = this->read_index_ / BITS_PER_BYTE;
-  int32_t end = (this->read_index_ + bits_captured) / BITS_PER_BYTE;
+  int32_t begin = this->read_index_ / BITS_PER_WORD;
+  int32_t end = (this->read_index_ + bits_captured) / BITS_PER_WORD;
   this->raw_message_.fill(0);
   for (int i = begin; i < end; i++) {
     this->raw_message_[i - begin] = this->store_.bit_buffer[i % BUFFER_SIZE];
