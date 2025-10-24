@@ -6,6 +6,7 @@
 #include "esphome/core/hal.h"
 #include "esphome/core/automation.h"
 #include "esphome/components/sensor/sensor.h"
+#include "esphome/components/uart/uart.h"
 
 namespace esphome {
 namespace neptune_water_meter {
@@ -16,14 +17,13 @@ class NeptuneWaterMeterSensor : public sensor::Sensor, public Component, public 
  public:
   // ========== INTERNAL METHODS ==========
   // (In most use cases you won't need these)
-  void setup() override;
   void dump_config() override;
   void loop() override;
 
   float get_setup_priority() const override;
 
   void register_listener(std::function<void(uint32_t)> listener) { this->listeners_.add(std::move(listener)); }
-  void set_timeout(unit_32 timeout) { this->timeout_ = timeout; }
+  void set_timeout(uint32_t timeout) { this->timeout_ = timeout; }
 
  protected:
   std::array<uint8_t, BUFFER_SIZE> raw_message_{0};
@@ -32,8 +32,6 @@ class NeptuneWaterMeterSensor : public sensor::Sensor, public Component, public 
   uint32_t timeout_;
 
   CallbackManager<void(int32_t)> listeners_{};
-  void flush_buffer_();
-  void dump_raw_buffer_();
   double_t parse_reading_();
 };
 

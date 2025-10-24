@@ -1,6 +1,11 @@
 sensor:
   - platform: neptune_water_meter
     id: water_meter_1
-    clock_pin: ${clock_pin}
-    data_pin: ${data_pin}
-    gain_factor: 1
+
+uart:
+  - id: uart_bus
+    rx_pin: ${data_pin}
+    baud_rate: 1200
+    parity: EVEN
+    stop_bits: 2
+    data_bits: 7

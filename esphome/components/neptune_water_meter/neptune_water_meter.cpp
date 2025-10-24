@@ -10,13 +10,14 @@ static const char *const TAG = "neptune_water_meter";
 constexpr size_t MESSAGE_LEN = 31;
 
 double_t NeptuneWaterMeterSensor::parse_reading_() {
-  ESP_LOGI(TAG, "Raw Message: %s", this.raw_message_.data());
+  std::string raw_message(this->raw_message_.begin(), this->raw_message_.end());
+  ESP_LOGI(TAG, "Raw Message: %s", raw_message);
   std::string reading{"0123456.7"};
   for (int i = 7; i < 13; i++) {
-    reading[i - 7] = this.raw_message_;
+    reading[i - 7] = this->raw_message_[i];
   }
-  reading[6] = this.raw_message_[27] & 0x7F;
-  reading[8] = this.raw_message_[28] & 0x7F;
+  reading[6] = this->raw_message_[27];
+  reading[8] = this->raw_message_[28];
 
   return std::stod(reading.c_str());
 }
@@ -26,26 +27,26 @@ void NeptuneWaterMeterSensor::loop() {
   auto bytes_available = this->available();
   if (bytes_available > 0) {
     this->last_byte_time_ = millis();
-    if (this->bytes_read + bytes_available > MESSAGE_LEN) {
+    if (this->bytes_read_ + bytes_available > MESSAGE_LEN) {
       // Deal with casewhere there are too many bytes available
-      bytes_available = MESSAGE_LEN - this->bytes_read;
+      bytes_available = MESSAGE_LEN - this->bytes_read_;
     }
-    if (this->read_array(this->raw_message_.data() + this->bytes_read, bytes_available)) {
+    if (this->read_array(this->raw_message_.data() + this->bytes_read_, bytes_available)) {
       ESP_LOGI(TAG, "Read %d bytes.", bytes_available);
-      this->bytes_read += bytes_available;
+      this->bytes_read_ += bytes_available;
     } else {
       ESP_LOGE(TAG, "Failed reading buffer");
     }
   }
 
   // Deal with timeout/incomplete message
-  if (millis() - this->last_byte_time_ > this.timeout_) {
-    this->bytes_read = 0;
+  if (millis() - this->last_byte_time_ > this->timeout_) {
+    this->bytes_read_ = 0;
   }
 
-  if (this->bytes_read == MESSAGE_LEN) {
+  if (this->bytes_read_ == MESSAGE_LEN) {
     double reading = this->parse_reading_();
-    this->bytes_read = 0;
+    this->bytes_read_ = 0;
     this->publish_state(reading);
     this->listeners_.call(reading);
   }
