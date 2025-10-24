@@ -44,23 +44,36 @@ void NeptuneWaterMeterSensor::flush_buffer_() {
   {
     InterruptLock lock;
     this->storage_.write_index = 0;
+    this->storage_.falling_edge_triggers = 0;
+    this->storage_.filtered_out_triggers = 0;
     this->storage_.bit_buffer.fill(DEFAULT_BUFFER_VALUE);
   }
+}
+
+void NeptuneWaterMeterSensor::dump_raw_buffer_() {
+  std::string buffer_data = "";
+  for (auto it : this->storage_.bit_buffer) {
+    if (BITS_PER_WORD > 8) {
+      buffer_data.push_back(it >> 8 & 0xFF);
+    }
+    buffer_data.push_back(it & 0xFF);
+  }
+  ESP_LOGD(TAG, "Buffer Data: %s", buffer_data.c_str());
 }
 
 double_t NeptuneWaterMeterSensor::parse_reading_() {
   std::string text{};
   for (uint16_t it : this->raw_message_) {
     // Discard start bit and stop bits leave parity bit
-    if (it & 0x001) {
-      ESP_LOGW(TAG, "Bad start bit");
-    }
-    if (!(it & 0x200)) {
-      ESP_LOGW(TAG, "Bad first stop bit");
-    }
-    if (!(it & 0x400)) {
-      ESP_LOGW(TAG, "Bad second stop bit");
-    }
+    // if (it & 0x001) {
+    //   ESP_LOGW(TAG, "Bad start bit");
+    // }
+    // if (!(it & 0x200)) {
+    //   ESP_LOGW(TAG, "Bad first stop bit");
+    // }
+    // if (!(it & 0x400)) {
+    //   ESP_LOGW(TAG, "Bad second stop bit");
+    // }
     uint8_t word = (it & 0x1FF) >> 1;
     ESP_LOGD(TAG, "word: %x", word);
     text.push_back(word);
@@ -107,9 +120,6 @@ void NeptuneWaterMeterSensor::loop() {
   uint32_t write_index = this->storage_.write_index;
   uint32_t bits_captured = write_index - this->read_index_;
 
-  ESP_LOGD(TAG, "Filtered transitions %d, Falling transitions: %d", this->storage_.filtered_out_triggers,
-           this->storage_.falling_edge_triggers);
-
   if (!bits_captured) {
     this->disable_loop();
     ESP_LOGD(TAG, "Loop disabled");
@@ -122,10 +132,16 @@ void NeptuneWaterMeterSensor::loop() {
   }
 
   bool buffer_corrupted = false;
+  ESP_LOGD(TAG, "Filtered transitions %d, Falling transitions: %d", this->storage_.filtered_out_triggers,
+           this->storage_.falling_edge_triggers);
   ESP_LOGD(TAG, "Captured %d unprocessed bits.", bits_captured);
   if (bits_captured % BITS_PER_WORD != 0) {
     // Bits received should be divisible by word length
     ESP_LOGW(TAG, "Incomplete Data Received");
+    buffer_corrupted = true;
+  }
+  if (bits_captured / BITS_PER_WORD > BUFFER_SIZE) {
+    ESP_LOGE(TAG, "Buffer overflow");
     buffer_corrupted = true;
   }
   if (this->read_index_ % BITS_PER_WORD != 0) {
@@ -135,26 +151,17 @@ void NeptuneWaterMeterSensor::loop() {
   }
   if (buffer_corrupted) {
     ESP_LOGD(TAG, "Buffer corrupted flushing");
-    std::string buffer_data = "";
-    for (auto it : this->storage_.bit_buffer) {
-      buffer_data.push_back(it >> 8 & 0xFF);
-      buffer_data.push_back(it & 0xFF);
-    }
-    ESP_LOGD(TAG, "Buffer Data: %s", buffer_data.c_str());
+    this->dump_raw_buffer_();
     this->flush_buffer_();
     return;
   }
-
-  int32_t begin = this->read_index_ / BITS_PER_WORD;
-  int32_t end = (this->read_index_ + bits_captured) / BITS_PER_WORD;
+  this->dump_raw_buffer_();
   this->raw_message_.fill(0);
-  for (int i = begin; i < end; i++) {
-    this->raw_message_[i - begin] = this->storage_.bit_buffer[i % BUFFER_SIZE];
+  for (int i = 0; i < (bits_captured / BITS_PER_WORD); i++) {
+    this->raw_message_[i] = this->storage_.bit_buffer[i];
   }
-  // Advance index
-  this->read_index_ = write_index;
+  this->flush_buffer_();
 
-  ESP_LOGD(TAG, "%s", this->raw_message_.data());
   uint32_t reading = this->parse_reading_();
   if (this->last_reading_ != reading && reading > 0) {
     this->last_reading_ = reading;
