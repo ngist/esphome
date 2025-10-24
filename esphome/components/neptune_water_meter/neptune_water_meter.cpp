@@ -16,14 +16,14 @@ void IRAM_ATTR HOT NeptuneWaterMeterSensorStorage::clock_interrupt(NeptuneWaterM
   // Capture data as quickly as possible when clock rises
   bool data = arg->pin_data.digital_read();
   auto now = micros();
-  if (!arg->pin_clock.digital_read()) {
-    // Falling edges are unexpected so log and return.
-    arg->falling_edge_triggers++;
-    return;
-  }
   if (now - arg->last_bit_time < FILTER_DURATION) {
     // Very fast transitions also unexpected so log and return
     arg->filtered_out_triggers++;
+    return;
+  }
+  if (!arg->pin_clock.digital_read()) {
+    // Falling edges are unexpected so log and return.
+    arg->falling_edge_triggers++;
     return;
   }
 
