@@ -14,16 +14,20 @@ constexpr size_t BUFFER_SIZE = 512;
 
 class NeptuneWaterMeterSensor;
 
-struct NeptuneWaterMeterSensorStore {
+struct NeptuneWaterMeterSensorStorage {
   ISRInternalGPIOPin pin_data;
+  ISRInternalGPIOPin pin_clock;
+
   NeptuneWaterMeterSensor &water_meter;
 
   // Setup a simple ring buffer
   volatile uint32_t write_index;
+  volatile uint32_t falling_edge_triggers;
+  volatile uint32_t filtered_out_triggers;
   volatile uint32_t last_bit_time;
   std::array<uint16_t, BUFFER_SIZE> bit_buffer;
 
-  static void clock_interrupt(NeptuneWaterMeterSensorStore *arg);
+  static void clock_interrupt(NeptuneWaterMeterSensorStorage *arg);
 };
 
 class NeptuneWaterMeterSensor : public sensor::Sensor, public Component {
@@ -56,7 +60,7 @@ class NeptuneWaterMeterSensor : public sensor::Sensor, public Component {
   uint32_t last_reading_{0};
   double_t scale_factor_;
 
-  NeptuneWaterMeterSensorStore store_{.water_meter = *this};
+  NeptuneWaterMeterSensorStorage storage_{.water_meter = *this};
 
   CallbackManager<void(int32_t)> listeners_{};
   void flush_buffer_();

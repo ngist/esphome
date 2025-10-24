@@ -11,10 +11,22 @@ constexpr uint8_t BITS_PER_WORD = 11;
 constexpr size_t MAX_BITS = BUFFER_SIZE * BITS_PER_WORD;
 constexpr uint16_t DEFAULT_BUFFER_VALUE = 0;
 
-void IRAM_ATTR HOT NeptuneWaterMeterSensorStore::clock_interrupt(NeptuneWaterMeterSensorStore *arg) {
+void IRAM_ATTR HOT NeptuneWaterMeterSensorStorage::clock_interrupt(NeptuneWaterMeterSensorStorage *arg) {
   // Capture data as quickly as possible when clock rises
   bool data = arg->pin_data.digital_read();
-  arg->last_bit_time = millis();
+  auto now = micros();
+  if (!arg->pin_clock.digital_read()) {
+    // Falling edges are unexpected so log and return.
+    arg->falling_edge_triggers++;
+    return;
+  }
+  if (now - arg->last_bit_time < 13) {
+    // Very fast transitions also unexpected so log and return
+    arg->filtered_out_triggers++;
+    return;
+  }
+
+  arg->last_bit_time = now;
   uint32_t write_index = arg->write_index;
 
   // Stuff the bit in the buffer, reader is responsible for clearing out the buffer after it's read.
@@ -30,8 +42,8 @@ void NeptuneWaterMeterSensor::flush_buffer_() {
   this->read_index_ = 0;
   {
     InterruptLock lock;
-    this->store_.write_index = 0;
-    this->store_.bit_buffer.fill(DEFAULT_BUFFER_VALUE);
+    this->storage_.write_index = 0;
+    this->storage_.bit_buffer.fill(DEFAULT_BUFFER_VALUE);
   }
 }
 
@@ -70,12 +82,15 @@ double_t NeptuneWaterMeterSensor::parse_reading_() {
 void NeptuneWaterMeterSensor::setup() {
   this->pin_clock_->setup();
   this->pin_data_->setup();
-  this->store_.pin_data = this->pin_data_->to_isr();
-  this->store_.bit_buffer.fill(DEFAULT_BUFFER_VALUE);
-  this->store_.write_index = 0;
-  this->store_.last_bit_time = millis();
+  this->storage_.pin_data = this->pin_data_->to_isr();
+  this->storage_.pin_clock = this->pin_clock_->to_isr();
+  this->storage_.bit_buffer.fill(DEFAULT_BUFFER_VALUE);
+  this->storage_.write_index = 0;
+  this->storage_.last_bit_time = micros();
+  this->storage_.falling_edge_triggers = 0;
+  this->storage_.filtered_out_triggers = 0;
 
-  this->pin_clock_->attach_interrupt(NeptuneWaterMeterSensorStore::clock_interrupt, &this->store_,
+  this->pin_clock_->attach_interrupt(NeptuneWaterMeterSensorStorage::clock_interrupt, &this->storage_,
                                      gpio::INTERRUPT_RISING_EDGE);
 }
 void NeptuneWaterMeterSensor::dump_config() {
@@ -85,11 +100,14 @@ void NeptuneWaterMeterSensor::dump_config() {
   ESP_LOGCONFIG(TAG, "  Scale Factor: %f", this->scale_factor_);
 }
 void NeptuneWaterMeterSensor::loop() {
-  uint32_t time_since_last_bit = millis() - this->store_.last_bit_time;
-  bool bus_idle = time_since_last_bit > 100;
+  uint32_t time_since_last_bit = micros() - this->storage_.last_bit_time;
+  bool bus_idle = time_since_last_bit > 25000;
   // Capture volatile value once to maintain a consistent state throughout the loop.
-  uint32_t write_index = this->store_.write_index;
+  uint32_t write_index = this->storage_.write_index;
   uint32_t bits_captured = write_index - this->read_index_;
+
+  ESP_LOGD(TAG, "Filtered transitions %d, Falling transitions: %d", this->storage_.filtered_out_triggers,
+           this->storage_.falling_edge_triggers);
 
   if (!bits_captured) {
     this->disable_loop();
@@ -117,7 +135,7 @@ void NeptuneWaterMeterSensor::loop() {
   if (buffer_corrupted) {
     ESP_LOGD(TAG, "Buffer corrupted flushing");
     std::string buffer_data = "";
-    for (auto it : this->store_.bit_buffer) {
+    for (auto it : this->storage_.bit_buffer) {
       buffer_data.push_back(it >> 8 & 0xFF);
       buffer_data.push_back(it & 0xFF);
     }
@@ -130,7 +148,7 @@ void NeptuneWaterMeterSensor::loop() {
   int32_t end = (this->read_index_ + bits_captured) / BITS_PER_WORD;
   this->raw_message_.fill(0);
   for (int i = begin; i < end; i++) {
-    this->raw_message_[i - begin] = this->store_.bit_buffer[i % BUFFER_SIZE];
+    this->raw_message_[i - begin] = this->storage_.bit_buffer[i % BUFFER_SIZE];
   }
   // Advance index
   this->read_index_ = write_index;
