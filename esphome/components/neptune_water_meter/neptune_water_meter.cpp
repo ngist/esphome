@@ -11,7 +11,7 @@ constexpr size_t MESSAGE_LEN = 31;
 
 double_t NeptuneWaterMeterSensor::parse_reading_() {
   std::string raw_message(this->raw_message_.begin(), this->raw_message_.end());
-  ESP_LOGI(TAG, "Raw Message: %s", raw_message);
+  ESP_LOGI(TAG, "Raw Message: %s", raw_message.c_str());
   std::string reading{"0123456.7"};
   for (int i = 7; i < 13; i++) {
     reading[i - 7] = this->raw_message_[i];
@@ -49,6 +49,9 @@ void NeptuneWaterMeterSensor::loop() {
     this->bytes_read_ = 0;
     this->publish_state(reading);
     this->listeners_.call(reading);
+  }
+  if (this->bytes_read_ >= MESSAGE_LEN) {
+    ESP_LOGE(TAG, "invalid state");
   }
 }
 
