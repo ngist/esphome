@@ -14,28 +14,50 @@ constexpr uint16_t FILTER_DURATION = 13;
 
 void IRAM_ATTR HOT NeptuneWaterMeterSensorStorage::clock_interrupt(NeptuneWaterMeterSensorStorage *arg) {
   // Capture data as quickly as possible when clock rises
-  bool data = arg->pin_data.digital_read();
-  auto now = micros();
-  if (now - arg->last_bit_time < FILTER_DURATION) {
-    // Very fast transitions also unexpected so log and return
-    arg->filtered_out_triggers++;
-    return;
-  }
-  if (!arg->pin_clock.digital_read()) {
-    // Falling edges are unexpected so log and return.
-    arg->falling_edge_triggers++;
-    return;
+  arg->last_bit_time = micros();
+  bool has_been_read = false;
+  while ((micros() - arg->last_bit_time) < 5000) {
+    if (!arg->pin_clock.digital_read()) {
+      has_been_read = false;
+    }
+    if (!has_been_read && arg->pin_clock.digital_read()) {
+      bool data = arg->pin_data.digital_read();
+      has_been_read = true;
+      arg->last_bit_time = micros();
+      uint32_t write_index = arg->write_index;
+
+      // Stuff the bit in the buffer, reader is responsible for clearing out the buffer after it's read.
+      if (data) {
+        arg->bit_buffer[write_index / BITS_PER_WORD] |= data << (write_index % BITS_PER_WORD);
+      }
+      // Increment and wrap back
+      arg->write_index = (write_index + 1) % MAX_BITS;
+      arg->write_index++;
+    }
   }
 
-  arg->last_bit_time = now;
-  uint32_t write_index = arg->write_index;
+  // bool data = arg->pin_data.digital_read();
+  // auto now = micros();
+  // if (!arg->pin_clock.digital_read()) {
+  //   // Falling edges are unexpected so log and return.
+  //   arg->falling_edge_triggers++;
+  //   return;
+  // }
+  // if (now - arg->last_bit_time < FILTER_DURATION) {
+  //   // Very fast transitions also unexpected so log and return
+  //   arg->filtered_out_triggers++;
+  //   return;
+  // }
 
-  // Stuff the bit in the buffer, reader is responsible for clearing out the buffer after it's read.
-  if (data) {
-    arg->bit_buffer[write_index / BITS_PER_WORD] |= data << (write_index % BITS_PER_WORD);
-  }
+  // arg->last_bit_time = now;
+  // uint32_t write_index = arg->write_index;
+
+  // // Stuff the bit in the buffer, reader is responsible for clearing out the buffer after it's read.
+  // if (data) {
+  //   arg->bit_buffer[write_index / BITS_PER_WORD] |= data << (write_index % BITS_PER_WORD);
+  // }
   // Increment and wrap back
-  arg->write_index = (write_index + 1) % MAX_BITS;
+  // arg->write_index = (write_index + 1) % MAX_BITS;
   arg->water_meter.enable_loop_soon_any_context();
 }
 
