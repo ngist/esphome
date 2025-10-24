@@ -32,7 +32,6 @@ void IRAM_ATTR HOT NeptuneWaterMeterSensorStorage::clock_interrupt(NeptuneWaterM
       }
       // Increment and wrap back
       arg->write_index = (write_index + 1) % MAX_BITS;
-      arg->write_index++;
     }
   }
 
