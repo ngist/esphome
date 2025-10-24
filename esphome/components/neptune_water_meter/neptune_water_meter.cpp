@@ -72,13 +72,22 @@ void NeptuneWaterMeterSensor::flush_buffer_() {
   }
 }
 
+uint8_t nibble_to_hex(uint8_t nibble) { return nibble < 10 ? 0x30 + nibble : 0x41 + (nibble - 10); }
+
+void pack_byte(uint8_t byte, std::string &buffer) {
+  uint8_t upper_nibble = byte >> 4 & 0xF;
+  uint8_t lower_nibble = byte & 0xF;
+  buffer.push_back(nibble_to_hex(upper_nibble));
+  buffer.push_back(nibble_to_hex(lower_nibble));
+}
+
 void NeptuneWaterMeterSensor::dump_raw_buffer_() {
   std::string buffer_data = "";
   for (auto it : this->storage_.bit_buffer) {
     if (BITS_PER_WORD > 8) {
-      buffer_data.push_back(it >> 8 & 0xFF);
+      pack_byte(it >> 8 & 0xFF, buffer_data);
     }
-    buffer_data.push_back(it & 0xFF);
+    pack_byte(it & 0xFF, buffer_data);
   }
   ESP_LOGD(TAG, "Buffer Data: %s", buffer_data.c_str());
 }
