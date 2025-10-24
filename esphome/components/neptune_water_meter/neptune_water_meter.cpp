@@ -6,10 +6,11 @@ namespace esphome {
 namespace neptune_water_meter {
 
 static const char *const TAG = "neptune_water_meter";
-// The raw data is trasmitted in 11 buts per word
+// The raw data is trasmitted in 11 bits per word
 constexpr uint8_t BITS_PER_WORD = 11;
 constexpr size_t MAX_BITS = BUFFER_SIZE * BITS_PER_WORD;
 constexpr uint16_t DEFAULT_BUFFER_VALUE = 0;
+constexpr uint16_t FILTER_DURATION = 13;
 
 void IRAM_ATTR HOT NeptuneWaterMeterSensorStorage::clock_interrupt(NeptuneWaterMeterSensorStorage *arg) {
   // Capture data as quickly as possible when clock rises
@@ -18,11 +19,13 @@ void IRAM_ATTR HOT NeptuneWaterMeterSensorStorage::clock_interrupt(NeptuneWaterM
   if (!arg->pin_clock.digital_read()) {
     // Falling edges are unexpected so log and return.
     arg->falling_edge_triggers++;
+    arg->water_meter.enable_loop_soon_any_context();
     return;
   }
-  if (now - arg->last_bit_time < 13) {
+  if (now - arg->last_bit_time < FILTER_DURATION) {
     // Very fast transitions also unexpected so log and return
     arg->filtered_out_triggers++;
+    arg->water_meter.enable_loop_soon_any_context();
     return;
   }
 
