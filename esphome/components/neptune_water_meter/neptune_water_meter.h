@@ -64,6 +64,7 @@ class NeptuneWaterMeterSensor : public sensor::Sensor, public Component {
 
   CallbackManager<void(int32_t)> listeners_{};
   void flush_buffer_();
+  void dump_raw_buffer_();
   double_t parse_reading_();
 };
 
