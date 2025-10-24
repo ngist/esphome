@@ -52,7 +52,5 @@ void NeptuneWaterMeterSensor::loop() {
   }
 }
 
-float NeptuneWaterMeterSensor::get_setup_priority() const { return setup_priority::DATA; }
-
 }  // namespace neptune_water_meter
 }  // namespace esphome

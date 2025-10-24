@@ -20,8 +20,6 @@ class NeptuneWaterMeterSensor : public sensor::Sensor, public Component, public 
   void dump_config() override;
   void loop() override;
 
-  float get_setup_priority() const override;
-
   void register_listener(std::function<void(uint32_t)> listener) { this->listeners_.add(std::move(listener)); }
   void set_timeout(uint32_t timeout) { this->timeout_ = timeout; }
 
