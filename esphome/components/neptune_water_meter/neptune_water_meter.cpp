@@ -24,35 +24,35 @@ double_t NeptuneWaterMeterSensor::parse_reading_() {
 
 void NeptuneWaterMeterSensor::dump_config() { LOG_SENSOR("", "Neptune Water Meter", this); }
 void NeptuneWaterMeterSensor::loop() {
-  // auto bytes_available = this->available();
-  // if (bytes_available > 0) {
-  //   this->last_byte_time_ = millis();
-  //   if (this->bytes_read_ + bytes_available > MESSAGE_LEN) {
-  //     // Deal with casewhere there are too many bytes available
-  //     bytes_available = MESSAGE_LEN - this->bytes_read_;
-  //   }
-  //   if (this->read_array(this->raw_message_.data() + this->bytes_read_, bytes_available)) {
-  //     ESP_LOGI(TAG, "Read %d bytes.", bytes_available);
-  //     this->bytes_read_ += bytes_available;
-  //   } else {
-  //     ESP_LOGE(TAG, "Failed reading buffer");
-  //   }
-  // }
+  int bytes_available = this->available();
+  if (bytes_available > 0) {
+    this->last_byte_time_ = millis();
+    if (this->bytes_read_ + bytes_available > MESSAGE_LEN) {
+      // Deal with casewhere there are too many bytes available
+      bytes_available = MESSAGE_LEN - this->bytes_read_;
+    }
+    if (this->read_array(this->raw_message_.data() + this->bytes_read_, bytes_available)) {
+      ESP_LOGI(TAG, "Read %d bytes.", bytes_available);
+      this->bytes_read_ += bytes_available;
+    } else {
+      ESP_LOGE(TAG, "Failed reading buffer");
+    }
+  }
 
-  // // Deal with timeout/incomplete message
-  // if (millis() - this->last_byte_time_ > this->timeout_) {
-  //   this->bytes_read_ = 0;
-  // }
+  // Deal with timeout/incomplete message
+  if (millis() - this->last_byte_time_ > this->timeout_) {
+    this->bytes_read_ = 0;
+  }
 
-  // if (this->bytes_read_ == MESSAGE_LEN) {
-  //   double reading = this->parse_reading_();
-  //   this->bytes_read_ = 0;
-  //   this->publish_state(reading);
-  //   this->listeners_.call(reading);
-  // }
-  // if (this->bytes_read_ >= MESSAGE_LEN) {
-  //   ESP_LOGE(TAG, "invalid state");
-  // }
+  if (this->bytes_read_ == MESSAGE_LEN) {
+    double reading = this->parse_reading_();
+    this->bytes_read_ = 0;
+    this->publish_state(reading);
+    this->listeners_.call(reading);
+  }
+  if (this->bytes_read_ >= MESSAGE_LEN) {
+    ESP_LOGE(TAG, "invalid state");
+  }
 }
 
 }  // namespace neptune_water_meter
