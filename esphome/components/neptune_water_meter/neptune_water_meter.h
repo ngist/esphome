@@ -12,42 +12,8 @@ namespace neptune_water_meter {
 
 constexpr size_t BUFFER_SIZE = 512;
 
-class NeptuneWaterMeterSensor;
-
-enum NeptuneWaterMeterSensorClockMode {
-  RISING_EDGE = 0,
-  FALLING_EDGE,
-};
-
-struct NeptuneWaterMeterSensorStorage {
-  ISRInternalGPIOPin pin_data;
-  ISRInternalGPIOPin pin_clock;
-
-  NeptuneWaterMeterSensor &water_meter;
-
-  // Setup a simple ring buffer
-  volatile uint32_t write_index;
-  volatile uint32_t falling_edge_triggers;
-  volatile uint32_t filtered_out_triggers;
-  volatile uint32_t last_bit_time;
-  bool clock_falling_edge_;
-  std::array<uint16_t, BUFFER_SIZE> bit_buffer;
-
-  static void clock_interrupt(NeptuneWaterMeterSensorStorage *arg);
-};
-
-class NeptuneWaterMeterSensor : public sensor::Sensor, public Component {
+class NeptuneWaterMeterSensor : public sensor::Sensor, public Component, public uart::UARTDevice {
  public:
-  void set_pin_clock(InternalGPIOPin *pin_clock) { pin_clock_ = pin_clock; }
-  void set_pin_data(InternalGPIOPin *pin_data) { pin_data_ = pin_data; }
-
-  /** Set scale factor of the reading
-   *
-   * Not all neptune meters report the same units so some readings need to be multiplied by a scale factor.
-   */
-  void set_scale_factor(double_t scale_factor) { scale_factor_ = scale_factor; }
-  void set_clock_edge(NeptuneWaterMeterSensorClockMode edge) { storage_.clock_falling_edge_ = edge; }
-
   // ========== INTERNAL METHODS ==========
   // (In most use cases you won't need these)
   void setup() override;
@@ -57,17 +23,13 @@ class NeptuneWaterMeterSensor : public sensor::Sensor, public Component {
   float get_setup_priority() const override;
 
   void register_listener(std::function<void(uint32_t)> listener) { this->listeners_.add(std::move(listener)); }
+  void set_timeout(unit_32 timeout) { this->timeout_ = timeout; }
 
  protected:
-  InternalGPIOPin *pin_clock_;
-  InternalGPIOPin *pin_data_;
-  uint32_t last_bits_captured_{0};
-  uint32_t read_index_{0};
-  std::array<uint16_t, BUFFER_SIZE> raw_message_{0};
-  uint32_t last_reading_{0};
-  double_t scale_factor_{1};
-
-  NeptuneWaterMeterSensorStorage storage_{.water_meter = *this};
+  std::array<uint8_t, BUFFER_SIZE> raw_message_{0};
+  size_t bytes_read_{0};
+  uint32_t last_byte_time_{0};
+  uint32_t timeout_;
 
   CallbackManager<void(int32_t)> listeners_{};
   void flush_buffer_();
