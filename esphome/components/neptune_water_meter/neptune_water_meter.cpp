@@ -17,10 +17,14 @@ void IRAM_ATTR HOT NeptuneWaterMeterSensorStorage::clock_interrupt(NeptuneWaterM
   arg->last_bit_time = micros();
   bool has_been_read = false;
   while ((micros() - arg->last_bit_time) < 5000) {
-    if (!arg->pin_clock.digital_read()) {
+    bool clock_value = arg->pin_clock.digital_read();
+    if (arg->clock_falling_edge_) {
+      clock_value = !clock_value;
+    }
+    if (!clock_value) {
       has_been_read = false;
     }
-    if (!has_been_read && arg->pin_clock.digital_read()) {
+    if (!has_been_read && clock_value) {
       bool data = arg->pin_data.digital_read();
       has_been_read = true;
       arg->last_bit_time = micros();
