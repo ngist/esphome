@@ -42,10 +42,12 @@ void NeptuneWaterMeterSensor::loop() {
 
   // Deal with timeout/incomplete message
   if (millis() - this->last_byte_time_ > this->timeout_) {
+    ESP_LOGW(TAG, "rx timeout");
     this->bytes_read_ = 0;
   }
 
   if (this->bytes_read_ == MESSAGE_LEN) {
+    ESP_LOGI(TAG, "reading rx'd");
     double reading = this->parse_reading_();
     this->bytes_read_ = 0;
     this->publish_state(reading);
