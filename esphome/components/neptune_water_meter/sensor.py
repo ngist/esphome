@@ -36,9 +36,9 @@ FINAL_VALIDATE_SCHEMA = uart.final_validate_device_schema(
     "neptune_water_meter",
     require_tx=False,
     require_rx=True,
-    data_bits=7,
-    parity="EVEN",
-    stop_bits=2,
+    # data_bits=7,
+    # parity="EVEN",
+    # stop_bits=2,
 )
 
 
