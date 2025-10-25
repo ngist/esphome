@@ -26,6 +26,7 @@ void NeptuneWaterMeterSensor::dump_config() { LOG_SENSOR("", "Neptune Water Mete
 void NeptuneWaterMeterSensor::loop() {
   int bytes_available = this->available();
   if (bytes_available > 0) {
+    ESP_LOGD(TAG, "%d bytes received", bytes_available);
     this->last_byte_time_ = millis();
     if (this->bytes_read_ + bytes_available > MESSAGE_LEN) {
       // Deal with casewhere there are too many bytes available
