@@ -34,7 +34,6 @@ CONFIG_SCHEMA = cv.All(
 
 FINAL_VALIDATE_SCHEMA = uart.final_validate_device_schema(
     "neptune_water_meter",
-    baud_rate=1200,
     require_tx=False,
     require_rx=True,
     data_bits=7,
