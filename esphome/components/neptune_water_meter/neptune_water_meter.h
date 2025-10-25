@@ -11,7 +11,7 @@
 namespace esphome {
 namespace neptune_water_meter {
 
-constexpr size_t BUFFER_SIZE = 512;
+constexpr size_t BUFFER_SIZE = 64;
 
 class NeptuneWaterMeterSensor : public sensor::Sensor, public Component, public uart::UARTDevice {
  public:

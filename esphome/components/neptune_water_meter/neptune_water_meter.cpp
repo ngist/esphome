@@ -32,7 +32,7 @@ void NeptuneWaterMeterSensor::loop() {
       // Deal with casewhere there are too many bytes available
       bytes_available = MESSAGE_LEN - this->bytes_read_;
     }
-    if (this->read_array(this->raw_message_.data() + this->bytes_read_, bytes_available)) {
+    if (this->read_array(&this->raw_message_[this->bytes_read_], bytes_available)) {
       ESP_LOGI(TAG, "Read %d bytes.", bytes_available);
       this->bytes_read_ += bytes_available;
     } else {
@@ -43,6 +43,7 @@ void NeptuneWaterMeterSensor::loop() {
   // Deal with timeout/incomplete message
   if (millis() - this->last_byte_time_ > this->timeout_ && this->bytes_read_) {
     ESP_LOGW(TAG, "rx timeout");
+    ESP_LOGW(TAG, "Buffer: %s bytes_read: %d", format_hex_pretty(this->raw_message_).c_str(), this->bytes_read_);
     this->bytes_read_ = 0;
   }
 
