@@ -12,7 +12,7 @@ constexpr size_t MESSAGE_LEN = 31;
 double_t NeptuneWaterMeterSensor::parse_reading_() {
   std::string raw_message(this->raw_message_.begin(), this->raw_message_.end());
   ESP_LOGI(TAG, "Raw Message: %s", format_hex_pretty(raw_message).c_str());
-  std::string reading{"0123456.7"};
+  std::string reading = "0123456.7";
   for (int i = 7; i < 13; i++) {
     reading[i - 7] = this->raw_message_[i];
   }
@@ -28,9 +28,9 @@ void NeptuneWaterMeterSensor::loop() {
   if (bytes_available > 0) {
     ESP_LOGD(TAG, "%d bytes received", bytes_available);
     this->last_byte_time_ = millis();
-    if (this->bytes_read_ + bytes_available > MESSAGE_LEN) {
+    if (this->bytes_read_ + bytes_available > BUFFER_SIZE) {
       // Deal with casewhere there are too many bytes available
-      bytes_available = MESSAGE_LEN - this->bytes_read_;
+      bytes_available = BUFFER_SIZE - this->bytes_read_;
     }
     if (this->read_array(&this->raw_message_[this->bytes_read_], bytes_available)) {
       ESP_LOGI(TAG, "Read %d bytes.", bytes_available);
@@ -48,15 +48,18 @@ void NeptuneWaterMeterSensor::loop() {
     this->bytes_read_ = 0;
   }
 
-  if (this->bytes_read_ == MESSAGE_LEN) {
+  if (this->bytes_read_ >= MESSAGE_LEN) {
     ESP_LOGI(TAG, "reading rx'd");
     double reading = this->parse_reading_();
     this->bytes_read_ = 0;
     this->publish_state(reading);
     this->listeners_.call(reading);
   }
-  if (this->bytes_read_ >= MESSAGE_LEN) {
+  if (this->bytes_read_ == BUFFER_SIZE) {
+    std::string partial(this->raw_message_.begin(), this->raw_message_.begin() + this->bytes_read_);
+    ESP_LOGW(TAG, "Buffer: %s bytes_read: %d", format_hex_pretty(partial).c_str(), this->bytes_read_);
     ESP_LOGE(TAG, "invalid state");
+    this->bytes_read_ = 0;
   }
 }
 
