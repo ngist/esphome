@@ -26,14 +26,14 @@ void NeptuneWaterMeterSensor::dump_config() { LOG_SENSOR("", "Neptune Water Mete
 void NeptuneWaterMeterSensor::loop() {
   int bytes_available = this->available();
   if (bytes_available > 0) {
-    ESP_LOGD(TAG, "%d bytes received", bytes_available);
     this->last_byte_time_ = millis();
     if (this->bytes_read_ + bytes_available > BUFFER_SIZE) {
       // Deal with casewhere there are too many bytes available
       bytes_available = BUFFER_SIZE - this->bytes_read_;
+      ESP_LOGW(TAG, "Message exceeds buffer size truncating.");
     }
     if (this->read_array(&this->raw_message_[this->bytes_read_], bytes_available)) {
-      ESP_LOGI(TAG, "Read %d bytes.", bytes_available);
+      ESP_LOGD(TAG, "Read %d bytes.", bytes_available);
       this->bytes_read_ += bytes_available;
     } else {
       ESP_LOGE(TAG, "Failed reading buffer");
@@ -49,9 +49,10 @@ void NeptuneWaterMeterSensor::loop() {
   }
 
   if (this->bytes_read_ >= MESSAGE_LEN) {
-    ESP_LOGI(TAG, "reading rx'd");
+    ESP_LOGI(TAG, "Read %d bytes message received", this->bytes_read_);
     double reading = this->parse_reading_();
     this->bytes_read_ = 0;
+    this->raw_message_.fill(0);
     this->publish_state(reading);
     this->listeners_.call(reading);
   }
