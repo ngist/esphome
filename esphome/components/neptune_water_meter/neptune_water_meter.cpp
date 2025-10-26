@@ -40,6 +40,7 @@ void NeptuneWaterMeterSensor::setup() {
   this->storage_.clock_count = 0;
   this->clock_pin_->attach_interrupt(NeptuneWaterMeterSensorStorage::clock_interrupt, &this->storage_,
                                      gpio::INTERRUPT_RISING_EDGE);
+  this->disable_loop();
 }
 
 void NeptuneWaterMeterSensor::reset_state_() {
