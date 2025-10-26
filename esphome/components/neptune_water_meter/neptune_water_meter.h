@@ -23,6 +23,8 @@ struct NeptuneWaterMeterSensorStorage {
 
   volatile uint32_t clock_count;
   uint32_t enable_count;
+  volatile uint32_t first_clock;
+  volatile uint32_t last_clock;
 
   static void clock_interrupt(NeptuneWaterMeterSensorStorage *arg);
 };

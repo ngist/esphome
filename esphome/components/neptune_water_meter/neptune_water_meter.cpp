@@ -11,7 +11,11 @@ constexpr size_t MESSAGE_LEN = 31;
 
 void IRAM_ATTR HOT NeptuneWaterMeterSensorStorage::clock_interrupt(NeptuneWaterMeterSensorStorage *arg) {
   // Capture data as quickly as possible when clock rises
+  if (arg->clock_count == 0) {
+    arg->last_clock = micros();
+  }
   arg->clock_count++;
+  arg->last_clock = micros();
   if (!arg->enable_pin.digital_read() && arg->clock_count >= arg->enable_count) {
     arg->enable_pin.digital_write(true);
   }
@@ -101,6 +105,8 @@ void NeptuneWaterMeterSensor::loop() {
 
   if (this->bytes_read_ >= MESSAGE_LEN) {
     ESP_LOGI(TAG, "Read %d bytes message received", this->bytes_read_);
+    ESP_LOGD(TAG, "%d clock over %dus", this->storage_.clock_count,
+             this->storage_.last_clock - this->storage_.first_clock);
     double reading = this->parse_reading_();
     this->reset_state_();
     this->publish_state(reading);
