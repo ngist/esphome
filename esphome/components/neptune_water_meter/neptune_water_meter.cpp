@@ -19,14 +19,23 @@ void IRAM_ATTR HOT NeptuneWaterMeterSensorStorage::clock_interrupt(NeptuneWaterM
 }
 
 double_t NeptuneWaterMeterSensor::parse_reading_() {
-  std::string raw_message(this->raw_message_.begin(), this->raw_message_.end());
+  std::string raw_message(this->raw_message_.begin(), this->raw_message_.begin() + this->bytes_read_);
   ESP_LOGI(TAG, "Raw Message: %s", format_hex_pretty(raw_message).c_str());
-  std::string reading = "0123456.7";
-  for (int i = 7; i < 13; i++) {
-    reading[i - 7] = this->raw_message_[i];
+  for (int i = 0; i < MESSAGE_LEN; i++) {
+    if (__builtin_parity(byte)) {
+      ESP_LOGE(TAG, "Parity error at byte %d", i)
+    }
+    // Strip Parity
+    raw_message[i] = raw_message[i] & 0x7F;
   }
-  reading[6] = this->raw_message_[27];
-  reading[8] = this->raw_message_[28];
+  ESP_LOGI(TAG, "Parity Removed: %s", raw_message.c_str());
+
+  std::string reading("0123456.7");
+  for (int i = 7; i < 13; i++) {
+    reading[i - 7] = raw_message_[i];
+  }
+  reading[6] = raw_message_[27];
+  reading[8] = raw_message_[28];
 
   return std::stod(reading.c_str());
 }
