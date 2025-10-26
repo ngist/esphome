@@ -12,7 +12,7 @@ constexpr size_t MESSAGE_LEN = 31;
 void IRAM_ATTR HOT NeptuneWaterMeterSensorStorage::clock_interrupt(NeptuneWaterMeterSensorStorage *arg) {
   // Capture data as quickly as possible when clock rises
   if (arg->clock_count == 0) {
-    arg->last_clock = micros();
+    arg->first_clock = micros();
   }
   arg->clock_count++;
   arg->last_clock = micros();
