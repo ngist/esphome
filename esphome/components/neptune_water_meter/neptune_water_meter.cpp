@@ -26,8 +26,8 @@ double_t NeptuneWaterMeterSensor::parse_reading_() {
   std::string raw_message(this->raw_message_.begin(), this->raw_message_.begin() + this->bytes_read_);
   ESP_LOGI(TAG, "Raw Message: %s", format_hex_pretty(raw_message).c_str());
   for (int i = 0; i < MESSAGE_LEN; i++) {
-    if (__builtin_parity(byte)) {
-      ESP_LOGE(TAG, "Parity error at byte %d", i)
+    if (__builtin_parity(raw_message[i])) {
+      ESP_LOGE(TAG, "Parity error at byte %d", i);
     }
     // Strip Parity
     raw_message[i] = raw_message[i] & 0x7F;
