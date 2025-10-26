@@ -36,25 +36,25 @@ void NeptuneWaterMeterSensor::setup() {
   this->storage_.clock_pin = this->clock_pin_->to_isr();
   this->enable_pin_->setup();
   this->storage_.enable_pin = this->enable_pin_->to_isr();
-  this->storage_.enable_pin.digital_write(false);
-  this->storage_.last_clock_time = micros();
+  this->enable_pin_->digital_write(false);
   this->storage_.clock_count = 0;
   this->clock_pin_->attach_interrupt(NeptuneWaterMeterSensorStorage::clock_interrupt, &this->storage_,
                                      gpio::INTERRUPT_RISING_EDGE);
 }
 
 void NeptuneWaterMeterSensor::reset_state_() {
-  ESP_LOGI("Resetting state and disabling loop.")
+  ESP_LOGI(TAG, "Resetting state and disabling loop.");
   this->bytes_read_ = 0;
   this->raw_message_.fill(0);
-  this->enable_pin_.digital_write(false);
+  this->enable_pin_->digital_write(false);
   {
     InterruptLock lock;
     this->storage_.clock_count = 0;
   }
   // Clear out any unprocessed dangling bytes
+  uint8_t data;
   while (this->available()) {
-    this->read_byte();
+    this->read_byte(&data);
   }
   this->disable_loop();
 }

@@ -66,7 +66,7 @@ async def to_code(config):
         await uart.register_uart_device(var, config)
 
     clock_pin = await cg.gpio_pin_expression(config[CONF_CLOCK_PIN])
-    cg.add(var.set_pin_clock(clock_pin))
+    cg.add(var.set_clock_pin(clock_pin))
     enable_pin = await cg.gpio_pin_expression(config[CONF_ENABLE_PIN])
     cg.add(var.set_enable_pin(enable_pin))
 

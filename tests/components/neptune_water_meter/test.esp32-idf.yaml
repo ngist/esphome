@@ -1,5 +1,6 @@
 substitutions:
   clock_pin: GPIO14
   data_pin: GPIO13
+  enable_pin: GPIO4
 
 <<: !include common.yaml

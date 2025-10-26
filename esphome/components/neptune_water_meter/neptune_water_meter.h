@@ -22,6 +22,7 @@ struct NeptuneWaterMeterSensorStorage {
   NeptuneWaterMeterSensor &water_meter;
 
   volatile uint32_t clock_count;
+  uint32_t enable_count;
 
   static void clock_interrupt(NeptuneWaterMeterSensorStorage *arg);
 };
@@ -36,7 +37,7 @@ class NeptuneWaterMeterSensor : public sensor::Sensor, public Component, public 
 
   void register_listener(std::function<void(uint32_t)> listener) { this->listeners_.add(std::move(listener)); }
   void set_timeout(uint32_t timeout) { this->timeout_ = timeout; }
-  void set_enable_count(uint32_t enable_count_) { this->storage_.enable_count = enable_count; }
+  void set_enable_count(uint32_t enable_count) { this->storage_.enable_count = enable_count; }
 
   void set_clock_pin(InternalGPIOPin *clock_pin) { this->clock_pin_ = clock_pin; }
   void set_enable_pin(InternalGPIOPin *enable_pin) { this->enable_pin_ = enable_pin; }

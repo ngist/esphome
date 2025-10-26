@@ -1,6 +1,8 @@
 sensor:
   - platform: neptune_water_meter
     id: water_meter_1
+    clock_pin: ${clock_pin}
+    enable_pin: ${enable_pin}
 
 uart:
   - id: uart_bus
