@@ -107,7 +107,7 @@ void NeptuneWaterMeterSensor::loop() {
   if (this->bytes_read_ >= MESSAGE_LEN) {
     ESP_LOGI(TAG, "Read %d bytes message received", this->bytes_read_);
     uint32_t elapsed_time = this->storage_.last_clock - this->storage_.first_clock;
-    ESP_LOGD(TAG, "%d clock over %dus", this->storage_.clock_count, elapsed_time);
+    ESP_LOGD(TAG, "%d clock over %uus", this->storage_.clock_count, elapsed_time);
     double reading = this->parse_reading_();
     this->reset_state_();
     this->publish_state(reading);
