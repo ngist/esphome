@@ -41,6 +41,7 @@ double_t NeptuneWaterMeterSensor::parse_reading_() {
   reading[6] = raw_message_[27];
   reading[8] = raw_message_[28];
 
+  ESP_LOGI(TAG, "Parsed Reading: %s", reading.c_str());
   return std::stod(reading.c_str());
 }
 
